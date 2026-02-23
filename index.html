@@ -319,6 +319,10 @@ footer{text-align:center;padding:48px;font-size:0.54rem;letter-spacing:.24em;tex
 </div>
 
 <script>
+// ── SUPABASE CONFIG ──
+const SUPABASE_URL = 'https://fucpdctukarziwzuuclf.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ1Y3BkY3R1a2Fyeml3enV1Y2xmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjQ5MzksImV4cCI6MjA4NzQ0MDkzOX0.cBOumcLEvW_uuTY-XUxP31V2Hn2fexZA466dA_p5gTY';
+
 const CATS=[
   {id:'single-camera'},
   {id:'net-camera'},
@@ -327,47 +331,63 @@ const CATS=[
   {id:'monitor-camera'},
 ];
 
-function render(){
-  const all=JSON.parse(localStorage.getItem('lumina_photos')||'[]');
-  CATS.forEach(cat=>{
-    const photos=all.filter(p=>p.category===cat.id);
-    document.getElementById('cnt-'+cat.id).textContent=photos.length;
-    const grid=document.getElementById('grid-'+cat.id);
-    grid.innerHTML='';
-    if(!photos.length){
-      grid.innerHTML='<div class="empty-photos"><p>No product photos yet — upload via admin</p></div>';
+async function loadAndRender() {
+  // show loading state in each grid
+  CATS.forEach(cat => {
+    const grid = document.getElementById('grid-' + cat.id);
+    grid.innerHTML = '<div class="empty-photos"><p>Loading…</p></div>';
+  });
+
+  // fetch all photos from Supabase
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/photos?select=*&order=created_at.desc`, {
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`
+    }
+  });
+  const all = res.ok ? await res.json() : [];
+
+  CATS.forEach(cat => {
+    const photos = all.filter(p => p.category === cat.id);
+    document.getElementById('cnt-' + cat.id).textContent = photos.length;
+    const grid = document.getElementById('grid-' + cat.id);
+    grid.innerHTML = '';
+
+    if (!photos.length) {
+      grid.innerHTML = '<div class="empty-photos"><p>No product photos yet — upload via admin</p></div>';
       return;
     }
-    grid.classList.toggle('has-many',photos.length>=6);
-    photos.forEach((p,i)=>{
-      const c=document.createElement('div');
-      c.className='pcard';
-      c.style.animationDelay=`${Math.min(i,12)*0.05}s`;
-      c.innerHTML=`<div class="pcard-shine"></div><img src="${p.src}" alt="${p.name}" loading="lazy"><div class="pcard-ov"><span>${p.name}</span></div>`;
-      c.onclick=()=>openLB(p.src,p.name);
+
+    grid.classList.toggle('has-many', photos.length >= 6);
+    photos.forEach((p, i) => {
+      const c = document.createElement('div');
+      c.className = 'pcard';
+      c.style.animationDelay = `${Math.min(i, 12) * 0.05}s`;
+      c.innerHTML = `<div class="pcard-shine"></div><img src="${p.url}" alt="${p.name}" loading="lazy"><div class="pcard-ov"><span>${p.name}</span></div>`;
+      c.onclick = () => openLB(p.url, p.name);
       grid.appendChild(c);
     });
   });
 }
 
 // scroll active tab
-const tabs=document.querySelectorAll('.ctab');
-const secs=CATS.map(c=>document.getElementById(c.id));
-window.addEventListener('scroll',()=>{
-  let cur=0;
-  secs.forEach((s,i)=>{if(window.scrollY>=s.offsetTop-180)cur=i;});
-  tabs.forEach((t,i)=>{
-    t.classList.toggle('active',i===cur);
-    const d=t.querySelector('.cdot');
-    if(d)d.style.background=i===cur?'var(--accent)':'var(--border)';
+const tabs = document.querySelectorAll('.ctab');
+const secs = CATS.map(c => document.getElementById(c.id));
+window.addEventListener('scroll', () => {
+  let cur = 0;
+  secs.forEach((s, i) => { if (window.scrollY >= s.offsetTop - 180) cur = i; });
+  tabs.forEach((t, i) => {
+    t.classList.toggle('active', i === cur);
+    const d = t.querySelector('.cdot');
+    if (d) d.style.background = i === cur ? 'var(--accent)' : 'var(--border)';
   });
 });
 
-function openLB(src,name){document.getElementById('lb-img').src=src;document.getElementById('lb-info').textContent=name;document.getElementById('lb').classList.add('open');}
-function closeLB(){document.getElementById('lb').classList.remove('open');}
-document.getElementById('lb').addEventListener('click',e=>{if(e.target===e.currentTarget)closeLB();});
+function openLB(src, name) { document.getElementById('lb-img').src = src; document.getElementById('lb-info').textContent = name; document.getElementById('lb').classList.add('open'); }
+function closeLB() { document.getElementById('lb').classList.remove('open'); }
+document.getElementById('lb').addEventListener('click', e => { if (e.target === e.currentTarget) closeLB(); });
 
-render();
+loadAndRender();
 </script>
 </body>
 </html>
